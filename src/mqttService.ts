@@ -1,58 +1,36 @@
-import mqtt from 'mqtt';
 import { execSync } from 'child_process';
 import { MqttConfig, HomeAssistantScene } from './types.js';
 import { scenes } from './scenes.js';
+import { MqttClient } from './mqttClient.js';
 
 export class MqttService {
-  private client: ReturnType<typeof mqtt.connect>;
-  private config: MqttConfig;
-  private instanceName: string;
+  private mqttClient: MqttClient;
 
   constructor(config: MqttConfig) {
-    this.config = config;
-    const instanceName = process.env.INSTANCE_NAME;
-    if (!instanceName) {
-      throw new Error('INSTANCE_NAME environment variable is required');
-    }
-    this.instanceName = instanceName;
-    this.client = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
-      clientId: config.clientId,
-      clean: true,
-      connectTimeout: 4000,
-      username: config.username,
-      password: config.password,
-      reconnectPeriod: 1000,
-    });
-
+    this.mqttClient = MqttClient.getInstance(config);
     this.setupEventHandlers();
   }
 
   private setupEventHandlers() {
-    this.client.on('connect', () => {
-      console.log('Connected to MQTT broker');
-      this.publishScenes();
-      this.client.subscribe('homeassistant/scene_executor/set');
-    });
-
-    this.client.on('message', (topic: string, payload: Buffer) => {
-      if (topic === 'homeassistant/scene_executor/set') {
-        const sceneName = payload.toString();
-        const scene = scenes.find(s => s.name === sceneName);
-        
-        if (scene && (!scene.instance || scene.instance === this.instanceName)) {
-          try {
-            execSync(scene.command);
-            console.log(`Executed command for scene: ${scene.name}`);
-          } catch (error) {
-            console.error(`Error executing command for scene ${scene.name}:`, error);
-          }
+    this.mqttClient.subscribe('homeassistant/scene_executor/set', (topic, payload) => {
+      const sceneName = payload.toString();
+      const scene = scenes.find(s => s.name === sceneName);
+      
+      if (scene && (!scene.instance || scene.instance === this.mqttClient.getInstanceName())) {
+        try {
+          execSync(scene.command);
+          console.log(`Executed command for scene: ${scene.name}`);
+        } catch (error) {
+          console.error(`Error executing command for scene ${scene.name}:`, error);
         }
       }
     });
+
+    this.publishScenes();
   }
 
   private publishScenes() {
-    const availableScenes = scenes.filter(scene => !scene.instance || scene.instance === this.instanceName);
+    const availableScenes = scenes.filter(scene => !scene.instance || scene.instance === this.mqttClient.getInstanceName());
     
     availableScenes.forEach(scene => {
       const haScene: HomeAssistantScene = {
@@ -67,7 +45,7 @@ export class MqttService {
       };
 
       const topic = `homeassistant/scene/${scene.name}/config`;
-      this.client.publish(topic, JSON.stringify(haScene), { retain: true });
+      this.mqttClient.publish(topic, JSON.stringify(haScene), { retain: true });
       console.log(`Published scene: ${scene.name}`);
     });
   }

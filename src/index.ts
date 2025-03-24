@@ -1,4 +1,5 @@
 import { MqttService } from './mqttService.js';
+import { MqttLightsService } from './mqttLights.js';
 import { scenes } from './scenes.js';
 
 const instanceName = process.env.INSTANCE_NAME || 'lenovo-legion7';
@@ -12,6 +13,7 @@ const config = {
 };
 
 const mqttService = new MqttService(config);
+const mqttLightsService = new MqttLightsService(config);
 
 // Handle process termination
 process.on('SIGINT', () => {
