@@ -1,0 +1,20 @@
+switch:
+  - platform: mqtt
+    name: "Scene Executor"
+    unique_id: "scene_executor"
+    state_topic: "homeassistant/scene_executor/state"
+    command_topic: "homeassistant/scene_executor/set"
+    payload_on: "on"
+    payload_off: "off"
+
+automation:
+  - alias: "Execute Scene Command"
+    trigger:
+      platform: state
+      entity_id: switch.scene_executor
+      to: "on"
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/scene_executor/state"
+          payload: "off" 
