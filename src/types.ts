@@ -3,6 +3,7 @@ export interface Scene {
   command: string;
   icon?: string;
   friendly_name: string;
+  instance?: string;
 }
 
 export interface MqttConfig {
@@ -22,4 +23,4 @@ export interface HomeAssistantScene {
   payload_on: string;
   unique_id: string;
   object_id: string;
-} 
+}

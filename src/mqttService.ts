@@ -6,9 +6,15 @@ import { scenes } from './scenes.js';
 export class MqttService {
   private client: ReturnType<typeof mqtt.connect>;
   private config: MqttConfig;
+  private instanceName: string;
 
   constructor(config: MqttConfig) {
     this.config = config;
+    const instanceName = process.env.INSTANCE_NAME;
+    if (!instanceName) {
+      throw new Error('INSTANCE_NAME environment variable is required');
+    }
+    this.instanceName = instanceName;
     this.client = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
       clientId: config.clientId,
       clean: true,
@@ -33,7 +39,7 @@ export class MqttService {
         const sceneName = payload.toString();
         const scene = scenes.find(s => s.name === sceneName);
         
-        if (scene) {
+        if (scene && (!scene.instance || scene.instance === this.instanceName)) {
           try {
             execSync(scene.command);
             console.log(`Executed command for scene: ${scene.name}`);
@@ -46,7 +52,9 @@ export class MqttService {
   }
 
   private publishScenes() {
-    scenes.forEach(scene => {
+    const availableScenes = scenes.filter(scene => !scene.instance || scene.instance === this.instanceName);
+    
+    availableScenes.forEach(scene => {
       const haScene: HomeAssistantScene = {
         platform: "mqtt",
         name: scene.name,
@@ -63,4 +71,4 @@ export class MqttService {
       console.log(`Published scene: ${scene.name}`);
     });
   }
-} 
+}
