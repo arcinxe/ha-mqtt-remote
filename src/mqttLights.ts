@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
-import { MqttConfig } from './types.js';
 import { MqttClient } from './mqttClient.js';
+import { MqttConfig } from './types.js';
 
 interface MqttLight {
   name: string;
@@ -12,6 +12,7 @@ interface MqttLight {
   icon?: string;
   instance: string;
   command: string;
+  currentBrightness: number;
 }
 
 const lenovoLegion7RgbLights: MqttLight = {
@@ -23,7 +24,21 @@ const lenovoLegion7RgbLights: MqttLight = {
   object_id: 'lenovo-legion7_rgb_light',
   icon: 'mdi:led-strip',
   instance: 'lenovo-legion7',
-  command: '/home/arcin/.npm-global/bin/legion7-rgb'
+  command: '/home/arcin/.npm-global/bin/legion7-rgb',
+  currentBrightness: 30,
+};
+
+const laptopBacklight: MqttLight = {
+  name: "laptop backlight",
+  friendly_name: "Laptop Backlight",
+  command_topic: "homeassistant/light/laptop_backlight/set",
+  state_topic: "homeassistant/light/laptop_backlight/state",
+  unique_id: "laptop_backlight",
+  object_id: "laptop_backlight",
+  icon: "mdi:laptop",
+  instance: "lenovo-legion7",
+  command: "brightnessctl -d intel_backlight set {value}%",
+  currentBrightness: 30,
 };
 
 export class MqttLightsService {
@@ -36,9 +51,10 @@ export class MqttLightsService {
   }
 
   private setupEventHandlers() {
+    // RGB Light handler
     this.mqttClient.subscribe(lenovoLegion7RgbLights.command_topic, (topic, payload) => {
       try {
-        console.log(`Received command: ${payload}`);
+        console.log(`Received RGB command: ${payload}`);
         const command = payload.toString();
         
         // Check if the command is a color value (comma-separated RGB)
@@ -84,7 +100,42 @@ export class MqttLightsService {
           this.mqttClient.publish(lenovoLegion7RgbLights.state_topic, JSON.stringify(state));
         }
       } catch (error) {
-        console.error('Error processing light command:', error);
+        console.error('Error processing RGB light command:', error);
+      }
+    });
+
+    // Backlight handler
+    this.mqttClient.subscribe(laptopBacklight.command_topic, (topic: string, message: Buffer) => {
+      const payload = message.toString();
+      console.log("Received laptop backlight command:", payload);
+
+      try {
+        // Handle ON/OFF commands
+        if (payload === "ON") {
+          // Restore last brightness
+          const command = laptopBacklight.command.replace("{value}", laptopBacklight.currentBrightness.toString());
+          execSync(command);
+          this.mqttClient.publish(laptopBacklight.state_topic, JSON.stringify({ state: "ON", brightness: laptopBacklight.currentBrightness }));
+        } else if (payload === "OFF") {
+          // Turn off backlight
+          const command = laptopBacklight.command.replace("{value}", "0");
+          execSync(command);
+          this.mqttClient.publish(laptopBacklight.state_topic, JSON.stringify({ state: "OFF", brightness: 0 }));
+        } else {
+          // Handle brightness command - payload is a direct integer 0-255
+          const brightness = parseInt(payload);
+          if (!isNaN(brightness)) {
+            // Convert Home Assistant brightness (0-255) to percentage (0-100)
+            const brightnessPercent = Math.round((brightness / 255) * 100);
+            laptopBacklight.currentBrightness = brightnessPercent;
+            const cmd = laptopBacklight.command.replace("{value}", brightnessPercent.toString());
+            console.log("Executing command:", cmd);
+            execSync(cmd);
+            this.mqttClient.publish(laptopBacklight.state_topic, JSON.stringify({ state: "ON", brightness: brightness }));
+          }
+        }
+      } catch (error) {
+        console.error("Error handling laptop backlight command:", error);
       }
     });
 
@@ -93,7 +144,8 @@ export class MqttLightsService {
 
   private publishLights() {
     if (lenovoLegion7RgbLights.instance === this.mqttClient.getInstanceName()) {
-      const haLight = {
+      // Publish RGB light config
+      const haRgbLight = {
         platform: "mqtt",
         name: lenovoLegion7RgbLights.name,
         friendly_name: lenovoLegion7RgbLights.friendly_name,
@@ -112,17 +164,47 @@ export class MqttLightsService {
         color_value_template: "{{ value_json.color | tojson }}"
       };
 
-      const topic = `homeassistant/light/${lenovoLegion7RgbLights.name}/config`;
-      this.mqttClient.publish(topic, JSON.stringify(haLight), { retain: true });
-      console.log(`Published light: ${lenovoLegion7RgbLights.name}`);
+      const rgbTopic = `homeassistant/light/${lenovoLegion7RgbLights.name}/config`;
+      this.mqttClient.publish(rgbTopic, JSON.stringify(haRgbLight), { retain: true });
+      console.log(`Published RGB light: ${lenovoLegion7RgbLights.name}`);
+
+      // Publish backlight config
+      this.mqttClient.publish(
+        "homeassistant/light/laptop_backlight/config",
+        JSON.stringify({
+          platform: "mqtt",
+          name: laptopBacklight.name,
+          friendly_name: laptopBacklight.friendly_name,
+          command_topic: laptopBacklight.command_topic,
+          state_topic: laptopBacklight.state_topic,
+          unique_id: laptopBacklight.unique_id,
+          object_id: laptopBacklight.object_id,
+          icon: laptopBacklight.icon,
+          brightness: true,
+          brightness_scale: 255,
+          state_value_template: "{{ value_json.state }}",
+          brightness_value_template: "{{ value_json.brightness }}",
+          brightness_command_topic: laptopBacklight.command_topic,
+          payload_on: "ON",
+          payload_off: "OFF",
+          state_class: "measurement",
+          supported_features: 1, // Enable brightness control
+          min_mireds: 0,
+          max_mireds: 0,
+          color_mode: "brightness",
+          supported_color_modes: ["brightness"]
+        })
+      );
 
       // Publish initial state
-      const initialState = {
-        state: "ON",
-        color: this.currentColor,
-        color_mode: "rgb"
-      };
-      this.mqttClient.publish(lenovoLegion7RgbLights.state_topic, JSON.stringify(initialState));
+      this.mqttClient.publish(
+        laptopBacklight.state_topic,
+        JSON.stringify({
+          state: "ON",
+          brightness: Math.round((laptopBacklight.currentBrightness / 100) * 255),
+          color_mode: "brightness"
+        })
+      );
     }
   }
 } 
