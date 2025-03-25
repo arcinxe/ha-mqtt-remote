@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { MqttClient } from './mqttClient.js';
 import { MqttConfig } from './types.js';
+import logger from './logger.js';
 
 interface MqttLight {
   name: string;
@@ -54,7 +55,7 @@ export class MqttLightsService {
     // RGB Light handler
     this.mqttClient.subscribe(lenovoLegion7RgbLights.command_topic, (topic, payload) => {
       try {
-        console.log(`Received RGB command: ${payload}`);
+        logger.info(`Received RGB command: ${payload}`);
         const command = payload.toString();
         
         // Check if the command is a color value (comma-separated RGB)
@@ -63,7 +64,7 @@ export class MqttLightsService {
           this.currentColor = { r, g, b };
           const hexColor = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
           execSync(`${lenovoLegion7RgbLights.command} -l ${hexColor} -v ${hexColor} -n ${hexColor} -k ${hexColor}`);
-          console.log(`Executed RGB command: ${hexColor}`);
+          logger.info(`Executed RGB command: ${hexColor}`);
           
           // Publish state update
           const state = {
@@ -75,7 +76,7 @@ export class MqttLightsService {
         } else if (command === "OFF") {
           // Handle turn off command
           execSync(`${lenovoLegion7RgbLights.command} -l 000000 -v 000000 -n 000000 -k 000000`);
-          console.log('Turned off RGB lights');
+          logger.info('Turned off RGB lights');
           
           // Publish state update
           const state = {
@@ -89,7 +90,7 @@ export class MqttLightsService {
           const { r, g, b } = this.currentColor;
           const hexColor = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
           execSync(`${lenovoLegion7RgbLights.command} -l ${hexColor} -v ${hexColor} -n ${hexColor} -k ${hexColor}`);
-          console.log(`Turned on RGB lights with color: ${hexColor}`);
+          logger.info(`Turned on RGB lights with color: ${hexColor}`);
           
           // Publish state update
           const state = {
@@ -100,14 +101,14 @@ export class MqttLightsService {
           this.mqttClient.publish(lenovoLegion7RgbLights.state_topic, JSON.stringify(state));
         }
       } catch (error) {
-        console.error('Error processing RGB light command:', error);
+        logger.error('Error processing RGB light command:', error);
       }
     });
 
     // Backlight handler
     this.mqttClient.subscribe(laptopBacklight.command_topic, (topic: string, message: Buffer) => {
       const payload = message.toString();
-      console.log("Received laptop backlight command:", payload);
+      logger.info(`Received laptop backlight command: ${payload}`);
 
       try {
         // Handle ON/OFF commands
@@ -129,13 +130,13 @@ export class MqttLightsService {
             const brightnessPercent = Math.round((brightness / 255) * 100);
             laptopBacklight.currentBrightness = brightnessPercent;
             const cmd = laptopBacklight.command.replace("{value}", brightnessPercent.toString());
-            console.log("Executing command:", cmd);
+            logger.info(`Executing command: ${cmd}`);
             execSync(cmd);
             this.mqttClient.publish(laptopBacklight.state_topic, JSON.stringify({ state: "ON", brightness: brightness }));
           }
         }
       } catch (error) {
-        console.error("Error handling laptop backlight command:", error);
+        logger.error("Error handling laptop backlight command:", error);
       }
     });
 
@@ -166,7 +167,7 @@ export class MqttLightsService {
 
       const rgbTopic = `homeassistant/light/${lenovoLegion7RgbLights.name}/config`;
       this.mqttClient.publish(rgbTopic, JSON.stringify(haRgbLight), { retain: true });
-      console.log(`Published RGB light: ${lenovoLegion7RgbLights.name}`);
+      logger.info(`Published RGB light: ${lenovoLegion7RgbLights.name}`);
 
       // Publish backlight config
       this.mqttClient.publish(

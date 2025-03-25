@@ -1,5 +1,6 @@
 import mqtt from 'mqtt';
 import { MqttConfig } from './types.js';
+import logger from './logger.js';
 
 export class MqttClient {
   private static instance: MqttClient;
@@ -38,7 +39,7 @@ export class MqttClient {
 
   private setupEventHandlers() {
     this.client.on('connect', () => {
-      console.log('Connected to MQTT broker');
+      logger.info('Connected to MQTT broker');
       // Notify subscribers that we're connected
       this.subscribers.forEach((callback, topic) => {
         this.client.subscribe(topic);
@@ -50,6 +51,18 @@ export class MqttClient {
       if (callback) {
         callback(topic, payload);
       }
+    });
+
+    this.client.on('error', (error) => {
+      logger.error('MQTT client error:', error);
+    });
+
+    this.client.on('close', () => {
+      logger.warn('MQTT connection closed');
+    });
+
+    this.client.on('reconnect', () => {
+      logger.info('MQTT client reconnecting');
     });
   }
 
