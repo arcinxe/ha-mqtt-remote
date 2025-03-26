@@ -1,0 +1,52 @@
+{
+  "buttons": [
+    {
+      "name": "laptop_backlight_off_button",
+      "friendly_name": "Turn Off Laptop Backlight Button",
+      "unique_id": "laptop_backlight_off_button",
+      "object_id": "laptop_backlight_off_button",
+      "icon": "mdi:laptop-off",
+      "instance": "lenovo-legion7",
+      "command": "brightnessctl -d intel_backlight set 0%",
+      "command_topic": "homeassistant/button/laptop_backlight_off/set",
+      "state_topic": "homeassistant/button/laptop_backlight_off/state",
+      "payload_press": "LAPTOP_BACKLIGHT_OFF"
+    },
+    {
+      "name": "laptop_backlight_on_button",
+      "friendly_name": "Turn On Laptop Backlight Button",
+      "unique_id": "laptop_backlight_on_button",
+      "object_id": "laptop_backlight_on_button",
+      "icon": "mdi:laptop",
+      "instance": "lenovo-legion7",
+      "command": "brightnessctl -d intel_backlight set 30%",
+      "command_topic": "homeassistant/button/laptop_backlight_on/set",
+      "state_topic": "homeassistant/button/laptop_backlight_on/state",
+      "payload_press": "LAPTOP_BACKLIGHT_ON"
+    },
+    {
+      "name": "rgb_lights_off_button",
+      "friendly_name": "Turn Off RGB Lights Button",
+      "unique_id": "rgb_lights_off_button",
+      "object_id": "rgb_lights_off_button",
+      "icon": "mdi:led-off",
+      "instance": "lenovo-legion7",
+      "command": "/home/arcin/.npm-global/bin/legion7-rgb -l 000000 -v 000000 -n 000000 -k 000000",
+      "command_topic": "homeassistant/button/rgb_lights_off/set",
+      "state_topic": "homeassistant/button/rgb_lights_off/state",
+      "payload_press": "RGB_LIGHTS_OFF"
+    },
+    {
+      "name": "rgb_lights_on_button",
+      "friendly_name": "Turn On RGB Lights Button",
+      "unique_id": "rgb_lights_on_button",
+      "object_id": "rgb_lights_on_button",
+      "icon": "mdi:led-strip",
+      "instance": "lenovo-legion7",
+      "command": "/home/arcin/.npm-global/bin/legion7-rgb -l ff0008 -v ff0008 -n ff0008 -k ff0008",
+      "command_topic": "homeassistant/button/rgb_lights_on/set",
+      "state_topic": "homeassistant/button/rgb_lights_on/state",
+      "payload_press": "RGB_LIGHTS_ON"
+    }
+  ]
+} 

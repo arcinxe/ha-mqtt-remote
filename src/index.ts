@@ -1,9 +1,10 @@
 import { config } from 'dotenv';
-import { MqttService } from './mqttService.js';
-import { MqttLightsService } from './mqttLights.js';
-import { scenes } from './scenes.js';
-import { MqttConfig } from './types.js';
-import logger from './logger.js';
+import { MqttScenesService } from './mqttScenes';
+import { MqttLightsService } from './mqttLights';
+import { MqttButtonsService } from './mqttButtons';
+import { scenes } from './scenes';
+import { MqttConfig } from './types';
+import logger from './logger';
 
 // Load environment variables
 config();
@@ -18,18 +19,23 @@ const mqttConfig: MqttConfig = {
   clientId: process.env.MQTT_CLIENT_ID || 'ha-mqtt-remote',
 };
 
-const mqttService = new MqttService(mqttConfig);
-
 try {
+  const mqttScenesService = new MqttScenesService(mqttConfig);
   const mqttLightsService = new MqttLightsService(mqttConfig);
-  logger.info('MQTT Lights Service started successfully');
+  const mqttButtonsService = new MqttButtonsService(mqttConfig);
+  logger.info('MQTT Services started successfully');
 } catch (error) {
-  logger.error('Failed to start MQTT Lights Service:', error);
+  logger.error('Failed to start MQTT Services:', error);
   process.exit(1);
 }
 
 // Handle process termination
 process.on('SIGINT', () => {
-  console.log('Shutting down...');
+  logger.info('Received SIGINT. Shutting down...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('Received SIGTERM. Shutting down...');
   process.exit(0);
 });

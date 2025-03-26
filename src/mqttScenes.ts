@@ -1,9 +1,10 @@
 import { execSync } from 'child_process';
-import { MqttConfig, HomeAssistantScene } from './types.js';
-import { scenes } from './scenes.js';
-import { MqttClient } from './mqttClient.js';
+import { MqttConfig, HomeAssistantScene } from './types';
+import { scenes } from './scenes';
+import { MqttClient } from './mqttClient';
+import logger from './logger';
 
-export class MqttService {
+export class MqttScenesService {
   private mqttClient: MqttClient;
 
   constructor(config: MqttConfig) {
@@ -19,9 +20,9 @@ export class MqttService {
       if (scene && (!scene.instance || scene.instance === this.mqttClient.getInstanceName())) {
         try {
           execSync(scene.command);
-          console.log(`Executed command for scene: ${scene.name}`);
+          logger.info(`Executed command for scene: ${scene.name}`);
         } catch (error) {
-          console.error(`Error executing command for scene ${scene.name}:`, error);
+          logger.error(`Error executing command for scene ${scene.name}:`, error);
         }
       }
     });
@@ -46,7 +47,7 @@ export class MqttService {
 
       const topic = `homeassistant/scene/${scene.name}/config`;
       this.mqttClient.publish(topic, JSON.stringify(haScene), { retain: true });
-      console.log(`Published scene: ${scene.name}`);
+      logger.info(`Published scene: ${scene.name}`);
     });
   }
-}
+} 
