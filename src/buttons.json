@@ -47,6 +47,17 @@
       "command_topic": "homeassistant/button/rgb_lights_on/set",
       "state_topic": "homeassistant/button/rgb_lights_on/state",
       "payload_press": "RGB_LIGHTS_ON"
+    },
+    {
+      "name": "set_input_devices_to_company_laptop_button",
+      "friendly_name": "Turn On RGB Lights Button",
+      "unique_id": "set_input_devices_to_company_laptop_button",
+      "object_id": "set_input_devices_to_company_laptop_button",
+      "icon": "mdi:led-strip",
+      "instance": "lenovo-legion7",
+      "command": "solaar -ddd config 'MX Master 2S' change-host 2; solaar -ddd config 'MX Keys' change-host 2",
+      "command_topic": "homeassistant/button/input-devices-to-company-laptop/set",
+      "payload_press": "INPUT_DEVICES_TO_COMPANY_LAPTOP"
     }
   ]
 } 
