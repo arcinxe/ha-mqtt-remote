@@ -11,7 +11,7 @@ export interface MqttConfig {
   port: number;
   username: string;
   password: string;
-  clientId: string;
+  instance: string;
 }
 
 export interface HomeAssistantScene {

@@ -16,7 +16,7 @@ const mqttConfig: MqttConfig = {
   port: parseInt(process.env.MQTT_PORT || '1883'),
   username: process.env.MQTT_USERNAME || '',
   password: process.env.MQTT_PASSWORD || '',
-  clientId: process.env.MQTT_CLIENT_ID || 'ha-mqtt-remote',
+  instance: process.env.INSTANCE || 'default'
 };
 
 try {

@@ -8,6 +8,10 @@ export class MqttClient {
   private config: MqttConfig;
   private instanceName: string;
   private subscribers: Map<string, (topic: string, payload: Buffer) => void>;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
+  private readonly reconnectDelay = 5000; // 5 seconds
 
   private constructor(config: MqttConfig) {
     this.config = config;
@@ -19,12 +23,12 @@ export class MqttClient {
     this.subscribers = new Map();
 
     this.client = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
-      clientId: config.clientId,
+      clientId: `ha-mqtt-remote-${config.instance}`,
       clean: true,
       connectTimeout: 4000,
       username: config.username,
       password: config.password,
-      reconnectPeriod: 1000,
+      reconnectPeriod: 0, // We'll handle reconnection manually
     });
 
     this.setupEventHandlers();
